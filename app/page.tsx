@@ -10,11 +10,11 @@ interface ChatMessage {
 }
 
 export default function ChatInterface() {
-  const API_BASE = "https://gpt-backend-qkjf.onrender.com" // Pas aan naar jouw API endpoint
+  const API_BASE = "https://gpt-backend-qkjf.onrender.com" // Pas aan naar jouw backend URL
 
   const [prompt, setPrompt] = useState("")
   const [chatHistory, setChatHistory] = useState<ChatMessage[]>([])
-  const [instructies, setInstructies] = useState("")  // Opslag van instructies
+  const [instructies, setInstructies] = useState("") // Opslag van instructies
   const [loading, setLoading] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement | null>(null)
 
@@ -29,13 +29,10 @@ export default function ChatInterface() {
     localStorage.setItem("chat_instructies", instructies)
   }, [instructies])
 
+  // Scroll naar beneden bij nieuwe chatberichten
   useEffect(() => {
-    scrollToBottom()
-  }, [chatHistory])
-
-  const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
-  }
+  }, [chatHistory])
 
   const handleSubmit = async () => {
     if (prompt.trim() === "") return
@@ -49,7 +46,7 @@ export default function ChatInterface() {
     try {
       setLoading(true)
 
-      // Maak array van messages in OpenAI format: eerst systeembericht met instructies, dan chatgeschiedenis, dan user prompt
+      // Maak array met systeem-instructies, chatgeschiedenis en nieuwe user prompt
       const messagesForApi = [
         { role: "system", content: instructies || "Je bent een behulpzame assistent." },
         ...chatHistory.map((m) => ({ role: m.role, content: m.content })),
@@ -60,7 +57,7 @@ export default function ChatInterface() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          prompt: "",           // leeg, want we sturen alles in chat_history
+          prompt: "",           // prompt leeg want alles in chat_history
           chat_history: messagesForApi,
         }),
       })
@@ -78,7 +75,7 @@ export default function ChatInterface() {
         loading: false,
       }
 
-      // Update chatgeschiedenis, vervang de ... loading message door AI antwoord
+      // Vervang de loading message door AI antwoord
       setChatHistory((prev) => [...prev.slice(0, -1), aiMsg])
     } catch (e: any) {
       alert(e.message)
@@ -90,26 +87,26 @@ export default function ChatInterface() {
   }
 
   return (
-    <div className="flex h-screen bg-zinc-900 text-white">
-      <aside className="w-1/3 p-6 flex flex-col gap-4 border-r border-zinc-800">
+    <div className="flex h-screen bg-zinc-900 text-white justify-center items-center p-4">
+      <div className="w-full max-w-3xl flex flex-col gap-4">
         <h1 className="text-3xl font-extrabold mb-4">Chat met OpenAI</h1>
 
         {/* Instructies invoerveld */}
         <textarea
           value={instructies}
           onChange={(e) => setInstructies(e.target.value)}
-          className="flex-grow bg-zinc-800 p-3 rounded text-white resize-none placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-green-500"
+          className="w-full bg-zinc-800 p-3 rounded text-white resize-none placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-green-500"
           placeholder="Voeg hier je instructies toe (optioneel)"
-          rows={5}
+          rows={4}
         />
 
         {/* Chatvenster */}
-        <div className="flex-1 overflow-auto mt-4">
+        <div className="flex-1 overflow-auto mt-2 max-h-[50vh] bg-zinc-800 p-4 rounded shadow-inner">
           <div className="flex flex-col gap-2">
             {chatHistory.map((msg, idx) => (
               <div
                 key={idx}
-                className={`p-3 rounded-lg max-w-[95%] ${
+                className={`p-3 rounded-lg max-w-[90%] ${
                   msg.role === "user"
                     ? "self-end bg-green-100 text-black"
                     : "self-start bg-gray-100 text-black"
@@ -128,7 +125,7 @@ export default function ChatInterface() {
         </div>
 
         {/* Prompt invoer */}
-        <div className="mt-4 flex items-center gap-2 relative">
+        <div className="mt-4 flex items-center gap-2">
           <textarea
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
@@ -150,7 +147,7 @@ export default function ChatInterface() {
             Genereer antwoord
           </button>
         </div>
-      </aside>
+      </div>
     </div>
   )
 }

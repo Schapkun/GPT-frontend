@@ -1,7 +1,6 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
-import { supabase } from "../lib/supabaseClient"
 import { RefreshCcw, Upload } from "lucide-react"
 
 interface Version {
@@ -27,7 +26,7 @@ interface ChatMessage {
 
 export default function Home() {
   // basis-URL uit env var
-  const API_BASE = "https://smart-ai-builder-backend.onrender.com"
+  const API_BASE = "https://gpt-backend-qkjf.onrender.com"
 
   const [prompt, setPrompt] = useState("")
   const [versionId, setVersionId] = useState<string | null>(null)
@@ -69,19 +68,17 @@ export default function Home() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }
 
+  // Verwijderde Supabase functie, gebruik een andere API of mock data
   async function fetchVersions() {
-    const { data, error } = await supabase
-      .from("versions")
-      .select("id, prompt, page_route, html_preview, html_live, timestamp, timestamp_local")
-      .order("timestamp", { ascending: false })
-      .limit(20)
+    // Gebruik mock data of vervang door een andere API-aanroep
+    const mockData = [
+      { id: "1", prompt: "Prompt 1", html_preview: "<div>Preview 1</div>", html_live: "<div>Live 1</div>", timestamp: "2025-07-16T10:00:00" },
+      { id: "2", prompt: "Prompt 2", html_preview: "<div>Preview 2</div>", html_live: "<div>Live 2</div>", timestamp: "2025-07-16T10:10:00" }
+    ]
+    setVersions(mockData)
 
-    if (error) return console.error("Fout bij ophalen versies:", error)
-
-    const filtered = (data || []).filter((v) => v.prompt?.trim())
-    setVersions(filtered)
-
-    const latest = filtered.find((v) => v.page_route === currentPageRoute && v.html_preview)
+    // Simuleer het ophalen van de laatste versie voor de preview
+    const latest = mockData.find((v) => v.page_route === currentPageRoute && v.html_preview)
     if (latest) {
       setHtmlPreview(latest.html_preview)
       setShowLiveProject(false)
@@ -89,77 +86,61 @@ export default function Home() {
   }
 
   async function handleSubmit() {
-  if (prompt.trim() === "") return
+    if (prompt.trim() === "") return
 
-  const userInput = prompt
-  const userMsg: ChatMessage = { role: "user", content: userInput }
-  const loadingMsg: ChatMessage = { role: "assistant", content: "...", loading: true }
+    const userInput = prompt
+    const userMsg: ChatMessage = { role: "user", content: userInput }
+    const loadingMsg: ChatMessage = { role: "assistant", content: "...", loading: true }
 
-  setChatHistory((prev) => [...prev, userMsg, loadingMsg])
-  setPrompt("")
+    setChatHistory((prev) => [...prev, userMsg, loadingMsg])
+    setPrompt("")
 
-  try {
+    try {
+      const res = await fetch(`${API_BASE}/prompt`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          prompt: userInput,
+          page_route: currentPageRoute,
+          chat_history: [...chatHistory, userMsg],
+        }),
+      })
 
-  const res = await fetch(`${API_BASE}/prompt`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      prompt: userInput,
-      page_route: currentPageRoute,
-      chat_history: [...chatHistory, userMsg],
-    }),
-  })
+      if (!res.ok) {
+        const text = await res.text()
+        throw new Error(`Backend fout: ${res.status} ${res.statusText} — ${text}`)
+      }
 
-    if (!res.ok) {
-      const text = await res.text()
-      throw new Error(`Backend fout: ${res.status} ${res.statusText} — ${text}`)
+      const data = await res.json()
+
+      const instructions = data.instructions || {}
+
+      const aiMsg: ChatMessage = {
+        role: "assistant",
+        content: instructions.message || "Ik heb je prompt ontvangen.",
+        explanation: instructions.message || undefined,
+        html: instructions.html || undefined,
+        hasChanges: instructions.hasChanges || false,
+        loading: false,
+        showCode: false,
+        files: data.files,
+      }
+
+      setChatHistory((prev) => [...prev.slice(0, -1), aiMsg])
+    } catch (e: any) {
+      alert(e.message)
     }
-
-    const data = await res.json()
-
-    console.log("hasChanges:", data.instructions?.hasChanges)
-    console.log("files:", data.files)
-    console.log("html:", data.instructions?.html)
-
-    const instructions = data.instructions || {}
-
-    const aiMsg: ChatMessage = {
-      role: "assistant",
-      content: instructions.message || "Ik heb je prompt ontvangen.",
-      explanation: instructions.message || undefined,
-      html: instructions.html || undefined,
-      hasChanges: instructions.hasChanges || false,
-      loading: false,
-      showCode: false,
-      files: data.files,
-    }
-
-    setChatHistory((prev) => [...prev.slice(0, -1), aiMsg])
-  } catch (e: any) {
-    alert(e.message)
   }
-}
 
   async function publishLive() {
     if (!versionId) return alert("Selecteer eerst een versie om live te zetten.")
     setLoadingPublish(true)
 
     try {
-      const { data, error } = await supabase
-        .from("versions")
-        .select("id")
-        .eq("timestamp", versionId)
-        .single()
-
-      if (error || !data) {
-        alert("Kon versie niet vinden: " + error?.message)
-        return
-      }
-
       const publishRes = await fetch(`${API_BASE}/publish`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ version_id: data.id }),
+        body: JSON.stringify({ version_id: versionId }),
       })
 
       const publishData = await publishRes.json()
@@ -334,10 +315,10 @@ export default function Home() {
           </span>
           <button
             onClick={() => {
-  const newState = !showLiveProject
-  setShowLiveProject(newState)
-  setCurrentIframeUrl(newState ? "https://www.meester.app" : "https://preview-version-meester.onrender.com")
-}}
+              const newState = !showLiveProject
+              setShowLiveProject(newState)
+              setCurrentIframeUrl(newState ? "https://www.meester.app" : "https://preview-version-meester.onrender.com")
+            }}
             className="bg-zinc-200 hover:bg-zinc-300 text-sm px-4 py-2 rounded"
           >
             {showLiveProject ? "Toon preview" : "Toon live"}
@@ -345,11 +326,11 @@ export default function Home() {
         </div>
 
         <iframe
-  key={iframeKey}
-  src={showLiveProject ? "https://www.meester.app" : "https://preview-version-meester.onrender.com"}
-  sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-storage-access-by-user-activation"
-  className="w-full h-[85vh] rounded border"
-/>
+          key={iframeKey}
+          src={showLiveProject ? "https://www.meester.app" : "https://preview-version-meester.onrender.com"}
+          sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-storage-access-by-user-activation"
+          className="w-full h-[85vh] rounded border"
+        />
       </main>
     </div>
   )

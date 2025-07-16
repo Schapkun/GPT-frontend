@@ -101,7 +101,7 @@ export default function ChatInterface() {
         />
 
         {/* Chatvenster */}
-        <div className="flex-1 overflow-auto mt-2 max-h-[50vh] bg-zinc-800 p-4 rounded shadow-inner">
+        <div className="flex-1 overflow-auto mt-2 max-h-[60vh] bg-zinc-800 p-4 rounded shadow-inner">
           <div className="flex flex-col gap-2">
             {chatHistory.map((msg, idx) => (
               <div

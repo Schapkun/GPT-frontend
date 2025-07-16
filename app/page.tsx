@@ -57,7 +57,7 @@ export default function ChatInterface() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          prompt: "",           // prompt leeg want alles in chat_history
+          prompt: "", // prompt leeg want alles in chat_history
           chat_history: messagesForApi,
         }),
       })
@@ -71,7 +71,7 @@ export default function ChatInterface() {
 
       const aiMsg: ChatMessage = {
         role: "assistant",
-        content: data.instructions?.message || "Ik heb je prompt ontvangen.",
+        content: data.message || "Ik heb je prompt ontvangen.",
         loading: false,
       }
 

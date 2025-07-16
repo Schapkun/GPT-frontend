@@ -1,7 +1,6 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
-import { RefreshCcw, Upload } from "lucide-react"
 
 // ChatMessage interface
 interface ChatMessage {
@@ -11,14 +10,24 @@ interface ChatMessage {
 }
 
 export default function ChatInterface() {
-  // basis-URL van OpenAI API
-  const API_BASE = "https://gpt-backend-qkjf.onrender.com" // Update met je eigen API-endpoint indien nodig
+  const API_BASE = "https://gpt-backend-qkjf.onrender.com" // Pas aan naar jouw API endpoint
 
   const [prompt, setPrompt] = useState("")
   const [chatHistory, setChatHistory] = useState<ChatMessage[]>([])
-  const [instructies, setInstructies] = useState("")  // Dit is het veld voor instructies
+  const [instructies, setInstructies] = useState("")  // Opslag van instructies
   const [loading, setLoading] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement | null>(null)
+
+  // Laad instructies uit localStorage bij mount
+  useEffect(() => {
+    const saved = localStorage.getItem("chat_instructies")
+    if (saved) setInstructies(saved)
+  }, [])
+
+  // Sla instructies op in localStorage bij wijzigen
+  useEffect(() => {
+    localStorage.setItem("chat_instructies", instructies)
+  }, [instructies])
 
   useEffect(() => {
     scrollToBottom()
@@ -34,23 +43,25 @@ export default function ChatInterface() {
     const userMsg: ChatMessage = { role: "user", content: prompt }
     const loadingMsg: ChatMessage = { role: "assistant", content: "...", loading: true }
 
-    // Voeg het gebruikersbericht en de laadstatus toe aan de chatgeschiedenis
     setChatHistory((prev) => [...prev, userMsg, loadingMsg])
-    setPrompt("")  // Reset het promptveld
+    setPrompt("")
 
     try {
       setLoading(true)
 
-      // Voeg de instructies toe aan de prompt voordat je het naar de API stuurt
-      const promptWithInstructions = `${instructies}\n${prompt}`
+      // Maak array van messages in OpenAI format: eerst systeembericht met instructies, dan chatgeschiedenis, dan user prompt
+      const messagesForApi = [
+        { role: "system", content: instructies || "Je bent een behulpzame assistent." },
+        ...chatHistory.map((m) => ({ role: m.role, content: m.content })),
+        { role: "user", content: prompt },
+      ]
 
-      // Stuur het verzoek naar je backend voor OpenAI verwerking
       const res = await fetch(`${API_BASE}/prompt`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          prompt: promptWithInstructions,
-          chat_history: [...chatHistory, userMsg],
+          prompt: "",           // leeg, want we sturen alles in chat_history
+          chat_history: messagesForApi,
         }),
       })
 
@@ -60,16 +71,19 @@ export default function ChatInterface() {
       }
 
       const data = await res.json()
+
       const aiMsg: ChatMessage = {
         role: "assistant",
-        content: data.instructions.message || "Ik heb je prompt ontvangen.",
+        content: data.instructions?.message || "Ik heb je prompt ontvangen.",
         loading: false,
       }
 
-      // Update de chatgeschiedenis met het antwoord van de AI
+      // Update chatgeschiedenis, vervang de ... loading message door AI antwoord
       setChatHistory((prev) => [...prev.slice(0, -1), aiMsg])
     } catch (e: any) {
       alert(e.message)
+      // Verwijder loading message als er een fout was
+      setChatHistory((prev) => prev.filter((msg) => !msg.loading))
     } finally {
       setLoading(false)
     }
@@ -86,6 +100,7 @@ export default function ChatInterface() {
           onChange={(e) => setInstructies(e.target.value)}
           className="flex-grow bg-zinc-800 p-3 rounded text-white resize-none placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-green-500"
           placeholder="Voeg hier je instructies toe (optioneel)"
+          rows={5}
         />
 
         {/* Chatvenster */}
@@ -95,12 +110,16 @@ export default function ChatInterface() {
               <div
                 key={idx}
                 className={`p-3 rounded-lg max-w-[95%] ${
-                  msg.role === "user" ? "self-end bg-green-100 text-black" : "self-start bg-gray-100 text-black"
+                  msg.role === "user"
+                    ? "self-end bg-green-100 text-black"
+                    : "self-start bg-gray-100 text-black"
                 }`}
               >
                 <div className="whitespace-pre-line">{msg.content}</div>
                 {msg.loading && (
-                  <div className="text-xs italic text-zinc-500 mt-1 animate-pulse">AI is aan het typen...</div>
+                  <div className="text-xs italic text-zinc-500 mt-1 animate-pulse">
+                    AI is aan het typen...
+                  </div>
                 )}
               </div>
             ))}
@@ -108,7 +127,7 @@ export default function ChatInterface() {
           </div>
         </div>
 
-        {/* Invoer van prompt */}
+        {/* Prompt invoer */}
         <div className="mt-4 flex items-center gap-2 relative">
           <textarea
             value={prompt}
@@ -121,6 +140,7 @@ export default function ChatInterface() {
             }}
             className="flex-grow bg-zinc-800 p-3 rounded text-white resize-none placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-green-500"
             placeholder="Typ hier je vraag..."
+            rows={3}
           />
           <button
             onClick={handleSubmit}
@@ -131,14 +151,6 @@ export default function ChatInterface() {
           </button>
         </div>
       </aside>
-
-      <main className="flex-1 p-8 overflow-auto bg-zinc-100 text-black rounded-l-3xl shadow-inner">
-        <h2 className="text-2xl font-semibold mb-4">Resultaat</h2>
-        <div className="bg-white p-4 rounded shadow">
-          {/* Hier kun je de AI output tonen */}
-          <p>De resultaten verschijnen hier</p>
-        </div>
-      </main>
     </div>
   )
 }

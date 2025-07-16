@@ -3,105 +3,53 @@
 import { useState, useEffect, useRef } from "react"
 import { RefreshCcw, Upload } from "lucide-react"
 
-interface Version {
-  id: string
-  prompt: string
-  page_route?: string
-  html_preview: string
-  html_live: string
-  timestamp: string
-  timestamp_local?: string
-}
-
+// ChatMessage interface
 interface ChatMessage {
   role: "user" | "assistant"
   content: string
-  html?: string
-  explanation?: string
-  hasChanges?: boolean
   loading?: boolean
-  showCode?: boolean
-  files?: any
 }
 
-export default function Home() {
-  // basis-URL uit env var
-  const API_BASE = "https://gpt-backend-qkjf.onrender.com"
+export default function ChatInterface() {
+  // basis-URL van OpenAI API
+  const API_BASE = "https://gpt-backend-qkjf.onrender.com" // Update met je eigen API-endpoint indien nodig
 
   const [prompt, setPrompt] = useState("")
-  const [versionId, setVersionId] = useState<string | null>(null)
-  const [versions, setVersions] = useState<Version[]>([])
-  const [htmlPreview, setHtmlPreview] = useState("")
-  const [showLiveProject, setShowLiveProject] = useState(true)
-  const [loadingPublish, setLoadingPublish] = useState(false)
   const [chatHistory, setChatHistory] = useState<ChatMessage[]>([])
-  const [currentPageRoute, setCurrentPageRoute] = useState("homepage")
-  const [currentIframeUrl, setCurrentIframeUrl] = useState<string>("https://www.meester.app")
-  const [iframeKey, setIframeKey] = useState(0)
-
+  const [instructies, setInstructies] = useState("")  // Dit is het veld voor instructies
+  const [loading, setLoading] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement | null>(null)
-
-  const iframeSrc = showLiveProject
-    ? "https://www.meester.app"
-    : "https://preview-version-meester.onrender.com"
-
-  useEffect(() => {
-    fetchVersions()
-  }, [currentPageRoute])
 
   useEffect(() => {
     scrollToBottom()
   }, [chatHistory])
 
-  useEffect(() => {
-    const handleMessage = (event: MessageEvent) => {
-      if (typeof event.data === "string" && event.data.startsWith("url:")) {
-        const url = event.data.replace("url:", "")
-        setCurrentIframeUrl(url)
-      }
-    }
-    window.addEventListener("message", handleMessage)
-    return () => window.removeEventListener("message", handleMessage)
-  }, [])
-
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }
 
-  // Verwijderde Supabase functie, gebruik een andere API of mock data
-  async function fetchVersions() {
-    // Gebruik mock data of vervang door een andere API-aanroep
-    const mockData = [
-      { id: "1", prompt: "Prompt 1", html_preview: "<div>Preview 1</div>", html_live: "<div>Live 1</div>", timestamp: "2025-07-16T10:00:00" },
-      { id: "2", prompt: "Prompt 2", html_preview: "<div>Preview 2</div>", html_live: "<div>Live 2</div>", timestamp: "2025-07-16T10:10:00" }
-    ]
-    setVersions(mockData)
-
-    // Simuleer het ophalen van de laatste versie voor de preview
-    const latest = mockData.find((v) => v.page_route === currentPageRoute && v.html_preview)
-    if (latest) {
-      setHtmlPreview(latest.html_preview)
-      setShowLiveProject(false)
-    }
-  }
-
-  async function handleSubmit() {
+  const handleSubmit = async () => {
     if (prompt.trim() === "") return
 
-    const userInput = prompt
-    const userMsg: ChatMessage = { role: "user", content: userInput }
+    const userMsg: ChatMessage = { role: "user", content: prompt }
     const loadingMsg: ChatMessage = { role: "assistant", content: "...", loading: true }
 
+    // Voeg het gebruikersbericht en de laadstatus toe aan de chatgeschiedenis
     setChatHistory((prev) => [...prev, userMsg, loadingMsg])
-    setPrompt("")
+    setPrompt("")  // Reset het promptveld
 
     try {
+      setLoading(true)
+
+      // Voeg de instructies toe aan de prompt voordat je het naar de API stuurt
+      const promptWithInstructions = `${instructies}\n${prompt}`
+
+      // Stuur het verzoek naar je backend voor OpenAI verwerking
       const res = await fetch(`${API_BASE}/prompt`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          prompt: userInput,
-          page_route: currentPageRoute,
+          prompt: promptWithInstructions,
           chat_history: [...chatHistory, userMsg],
         }),
       })
@@ -112,128 +60,36 @@ export default function Home() {
       }
 
       const data = await res.json()
-
-      const instructions = data.instructions || {}
-
       const aiMsg: ChatMessage = {
         role: "assistant",
-        content: instructions.message || "Ik heb je prompt ontvangen.",
-        explanation: instructions.message || undefined,
-        html: instructions.html || undefined,
-        hasChanges: instructions.hasChanges || false,
+        content: data.instructions.message || "Ik heb je prompt ontvangen.",
         loading: false,
-        showCode: false,
-        files: data.files,
       }
 
+      // Update de chatgeschiedenis met het antwoord van de AI
       setChatHistory((prev) => [...prev.slice(0, -1), aiMsg])
     } catch (e: any) {
       alert(e.message)
+    } finally {
+      setLoading(false)
     }
-  }
-
-  async function publishLive() {
-    if (!versionId) return alert("Selecteer eerst een versie om live te zetten.")
-    setLoadingPublish(true)
-
-    try {
-      const publishRes = await fetch(`${API_BASE}/publish`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ version_id: versionId }),
-      })
-
-      const publishData = await publishRes.json()
-      if (publishRes.ok) {
-        alert("Live versie succesvol bijgewerkt!")
-        setShowLiveProject(true)
-        fetchVersions()
-      } else {
-        alert("Fout bij publiceren: " + (publishData.error || publishData.message))
-      }
-    } catch (err: any) {
-      alert("Fout bij publiceren: " + err.message)
-    }
-
-    setLoadingPublish(false)
-  }
-
-  async function restoreVersion(versionId: string) {
-    try {
-      const res = await fetch(`${API_BASE}/restore`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ version_id: versionId }),
-      })
-      const data = await res.json()
-      if (res.ok) {
-        alert("Versie succesvol hersteld naar preview!")
-        setShowLiveProject(false)
-        fetchVersions()
-      } else {
-        alert("Fout bij herstellen: " + (data.error || data.message))
-      }
-    } catch (err: any) {
-      alert("Fout bij herstellen: " + err.message)
-    }
-  }
-
-  async function implementChange(html: string, originalPrompt: string) {
-    // 1) UI meteen bijwerken
-    setHtmlPreview(html)
-    setShowLiveProject(false)
-
-    try {
-      const res = await fetch(`${API_BASE}/commit`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ html, prompt: originalPrompt }),
-      })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error || "Onbekende fout")
-
-      setChatHistory((prev) => [
-        ...prev,
-        { role: "assistant", content: "🚀 Wijziging succesvol gepusht.", loading: false },
-      ])
-    } catch (err: any) {
-      setChatHistory((prev) => [
-        ...prev,
-        { role: "assistant", content: `❌ Fout bij commit: ${err.message}`, loading: false },
-      ])
-    }
-  }
-
-  function selectVersion(v: Version) {
-    setPrompt(v.prompt)
-    setHtmlPreview(v.html_preview)
-    setVersionId(v.timestamp)
-    setShowLiveProject(false)
   }
 
   return (
     <div className="flex h-screen bg-zinc-900 text-white">
       <aside className="w-1/3 p-6 flex flex-col gap-4 border-r border-zinc-800">
-        <h1 className="text-3xl font-extrabold mb-4">Loveable Clone</h1>
+        <h1 className="text-3xl font-extrabold mb-4">Chat met OpenAI</h1>
 
-        <div className="flex justify-end items-center mb-4 gap-2">
-          <button
-            onClick={() => setIframeKey((k) => k + 1)}
-            className="bg-zinc-700 hover:bg-zinc-600 p-2 rounded-full"
-          >
-            <RefreshCcw size={18} />
-          </button>
+        {/* Instructies invoerveld */}
+        <textarea
+          value={instructies}
+          onChange={(e) => setInstructies(e.target.value)}
+          className="flex-grow bg-zinc-800 p-3 rounded text-white resize-none placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-green-500"
+          placeholder="Voeg hier je instructies toe (optioneel)"
+        />
 
-          <button
-            disabled={!versionId || loadingPublish}
-            onClick={publishLive}
-            className="bg-blue-600 hover:bg-blue-500 px-3 py-2 text-xs rounded-full flex items-center gap-1 disabled:opacity-50"
-          >
-            <Upload size={14} /> Publiceer live
-          </button>
-        </div>
-
-        <div className="flex-1 overflow-auto">
+        {/* Chatvenster */}
+        <div className="flex-1 overflow-auto mt-4">
           <div className="flex flex-col gap-2">
             {chatHistory.map((msg, idx) => (
               <div
@@ -246,20 +102,13 @@ export default function Home() {
                 {msg.loading && (
                   <div className="text-xs italic text-zinc-500 mt-1 animate-pulse">AI is aan het typen...</div>
                 )}
-                {msg.hasChanges && msg.html && (
-                  <button
-                    onClick={() => implementChange(msg.html!, msg.content)}
-                    className="mt-2 text-sm text-blue-600 underline"
-                  >
-                    Implementeer wijzigingen
-                  </button>
-                )}
               </div>
             ))}
             <div ref={messagesEndRef} />
           </div>
         </div>
 
+        {/* Invoer van prompt */}
         <div className="mt-4 flex items-center gap-2 relative">
           <textarea
             value={prompt}
@@ -271,66 +120,24 @@ export default function Home() {
               }
             }}
             className="flex-grow bg-zinc-800 p-3 rounded text-white resize-none placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-green-500"
-            placeholder="Typ hier je prompt..."
+            placeholder="Typ hier je vraag..."
           />
           <button
             onClick={handleSubmit}
-            className="bg-green-600 hover:bg-green-500 px-4 py-2 text-sm rounded-full font-medium"
+            disabled={loading}
+            className="bg-green-600 hover:bg-green-500 px-4 py-2 text-sm rounded-full font-medium disabled:opacity-50"
           >
-            Genereer code
+            Genereer antwoord
           </button>
-        </div>
-
-        <div className="mt-4">
-          <h2 className="font-semibold text-sm text-zinc-400 mb-2">Version History</h2>
-          <ul className="space-y-1 max-h-[150px] overflow-auto">
-            {versions.map((v) => (
-              <li
-                key={v.id}
-                className={`cursor-pointer px-3 py-2 rounded transition ${
-                  v.timestamp === versionId ? "bg-zinc-700" : "hover:bg-zinc-700"
-                }`}
-                onClick={() => selectVersion(v)}
-              >
-                <time className="block text-xs text-zinc-500">
-                  {new Date(v.timestamp).toLocaleString("nl-NL", { timeZone: "Europe/Amsterdam" })}
-                </time>
-                <p className="truncate text-sm">{v.prompt}</p>
-                <button
-                  onClick={(e) => { e.stopPropagation(); restoreVersion(v.id) }}
-                  className="mt-1 text-xs text-blue-500 underline"
-                >
-                  Herstel naar preview
-                </button>
-              </li>
-            ))}
-          </ul>
         </div>
       </aside>
 
       <main className="flex-1 p-8 overflow-auto bg-zinc-100 text-black rounded-l-3xl shadow-inner">
-        <div className="flex justify-between items-center mb-4 bg-white px-4 py-2 rounded">
-          <span className="text-sm text-zinc-700 break-all">
-            {currentIframeUrl || iframeSrc}
-          </span>
-          <button
-            onClick={() => {
-              const newState = !showLiveProject
-              setShowLiveProject(newState)
-              setCurrentIframeUrl(newState ? "https://www.meester.app" : "https://preview-version-meester.onrender.com")
-            }}
-            className="bg-zinc-200 hover:bg-zinc-300 text-sm px-4 py-2 rounded"
-          >
-            {showLiveProject ? "Toon preview" : "Toon live"}
-          </button>
+        <h2 className="text-2xl font-semibold mb-4">Resultaat</h2>
+        <div className="bg-white p-4 rounded shadow">
+          {/* Hier kun je de AI output tonen */}
+          <p>De resultaten verschijnen hier</p>
         </div>
-
-        <iframe
-          key={iframeKey}
-          src={showLiveProject ? "https://www.meester.app" : "https://preview-version-meester.onrender.com"}
-          sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-storage-access-by-user-activation"
-          className="w-full h-[85vh] rounded border"
-        />
       </main>
     </div>
   )

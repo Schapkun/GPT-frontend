@@ -37,25 +37,10 @@ export default function ChatInterface() {
     title4: "", instr4: "",
   })
 
-  // Laad inputFields uit localStorage bij mount
-  useEffect(() => {
-    const savedFields = localStorage.getItem("chat_input_fields")
-    if (savedFields) {
-      setInputFields(JSON.parse(savedFields))
-    }
-  }, [])
-
-  // Sla inputFields op in localStorage bij elke wijziging
-  useEffect(() => {
-    localStorage.setItem("chat_input_fields", JSON.stringify(inputFields))
-  }, [inputFields])
-
-  // Scroll automatisch naar beneden bij nieuwe berichten
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [chatHistory])
 
-  // Beheer textarea hoogte max 10 regels
   const handlePromptChange = (e: ChangeEvent<HTMLTextAreaElement>) => {
     const textarea = e.target
     const maxRows = 10
@@ -71,37 +56,48 @@ export default function ChatInterface() {
     setPrompt(textarea.value)
   }
 
-  // Handle verandering in rechter inputvelden en titels
   const handleFieldChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setInputFields(prev => ({ ...prev, [e.target.name]: e.target.value }))
   }
 
-  // Code blok detectie: markdown ```code``` regex
+  // Verbeterde parse functie: splitst tekst in codeblokken en tekst, zonder afbreken
   const parseCodeBlocks = (text: string) => {
     const regex = /```(\w+)?\n([\s\S]*?)```/g
-    let lastIndex = 0
     const elements = []
+    let lastIndex = 0
     let match
-    while ((match = regex.exec(text)) !== null) {
-      const before = text.substring(lastIndex, match.index)
-      if (before.trim()) elements.push(<p key={`text-${lastIndex}`}>{before.trim()}</p>)
 
+    while ((match = regex.exec(text)) !== null) {
+      // Tekst vóór codeblok
+      const before = text.substring(lastIndex, match.index)
+      if (before.trim() !== "") {
+        elements.push(
+          <p key={`text-${lastIndex}`} className="whitespace-pre-wrap break-words">{before.trim()}</p>
+        )
+      }
+
+      // Codeblok
       const lang = match[1] || "text"
       const code = match[2]
 
       elements.push(
         <CodeBlock key={`code-${match.index}`} code={code} language={lang} />
       )
+
       lastIndex = regex.lastIndex
     }
-    // Resterende tekst na laatste codeblock
+
+    // Rest van tekst na laatste codeblok
     const rest = text.substring(lastIndex)
-    if (rest.trim()) elements.push(<p key={`text-end`}>{rest.trim()}</p>)
+    if (rest.trim() !== "") {
+      elements.push(
+        <p key={`text-end`} className="whitespace-pre-wrap break-words">{rest.trim()}</p>
+      )
+    }
 
     return elements
   }
 
-  // Kopieerknop component met sticky scroll binnen codeblok container
   const CodeBlock = ({ code, language }: { code: string; language: string }) => {
     const containerRef = useRef<HTMLDivElement>(null)
 
@@ -109,7 +105,6 @@ export default function ChatInterface() {
       navigator.clipboard.writeText(code)
     }
 
-    // Sticky knop scroll gedrag
     useEffect(() => {
       const el = containerRef.current
       if (!el) return
@@ -234,7 +229,7 @@ ${inputFields.instr4}
               className={`max-w-[80%] px-4 py-3 rounded-xl whitespace-pre-wrap break-words ${
                 msg.role === "user"
                   ? "self-end bg-slate-600 text-white rounded-br-sm"
-                  : "self-start bg-zinc-700 text-white rounded-bl-sm"
+                  : "self-start bg-transparent text-white rounded-bl-sm"
               }`}
             >
               {parseCodeBlocks(msg.content)}

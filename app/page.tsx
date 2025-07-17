@@ -351,24 +351,6 @@ ${inputFields.instr4}
             placeholder="Typ hier je vraag..."
             className="w-full resize-none rounded-xl bg-zinc-700 p-3 text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-green-500"
           />
-          <button
-            onClick={copyPrompt}
-            title="Kopieer laatst verzonden prompt"
-            className="absolute right-4 bottom-2 opacity-0 group-hover:opacity-100 bg-zinc-700 px-3 py-1 rounded-md text-xs text-white hover:bg-zinc-600 transition flex items-center gap-1"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth={2}
-              viewBox="0 0 24 24"
-              className="w-4 h-4 inline-block"
-            >
-              <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
-              <rect x="4" y="4" width="13" height="13" rx="2" ry="2" />
-            </svg>
-            Kopieer
-          </button>
         </div>
       </section>
 

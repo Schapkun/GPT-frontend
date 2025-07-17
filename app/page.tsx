@@ -63,14 +63,18 @@ export default function ChatInterface() {
 
   const handlePromptChange = (e: ChangeEvent<HTMLTextAreaElement>) => {
     const textarea = e.target
+    const minRows = 3
     const maxRows = 10
-    textarea.rows = 1
+    textarea.rows = minRows
     const currentRows = Math.floor(textarea.scrollHeight / 24)
     if (currentRows > maxRows) {
       textarea.rows = maxRows
       textarea.style.overflowY = "auto"
-    } else {
+    } else if (currentRows > minRows) {
       textarea.rows = currentRows
+      textarea.style.overflowY = "hidden"
+    } else {
+      textarea.rows = minRows
       textarea.style.overflowY = "hidden"
     }
     setPrompt(textarea.value)

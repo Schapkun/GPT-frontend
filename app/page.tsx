@@ -303,6 +303,13 @@ ${inputFields.instr4}
     }
   }
 
+  // Kopieer prompt functie
+  const copyPrompt = () => {
+    if (lastUserPrompt) {
+      navigator.clipboard.writeText(lastUserPrompt)
+    }
+  }
+
   return (
     <div className="flex h-screen bg-[#101010] text-white p-6 gap-6">
       {/* Chat history links */}
@@ -321,7 +328,7 @@ ${inputFields.instr4}
         <div
           className="flex-1 overflow-y-auto px-6 py-4 space-y-4"
           style={{
-            maxWidth: "600px",
+            maxWidth: "900px",
             margin: "0 auto",
             textAlign: "left",
           }}
@@ -346,8 +353,7 @@ ${inputFields.instr4}
 
         {/* Input prompt onderaan */}
         <div
-          className="border-t border-zinc-700 p-4 bg-[#101010] flex flex-col gap-2"
-          style={{ maxWidth: 600, margin: "0 auto" }}
+          className="border-t border-zinc-700 p-4 bg-[#101010] flex flex-col gap-2 relative max-w-[900px] mx-auto group"
         >
           <textarea
             ref={promptRef}
@@ -364,6 +370,25 @@ ${inputFields.instr4}
             placeholder="Typ hier je vraag..."
             className="w-full resize-none rounded-xl bg-zinc-700 p-3 text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-green-500"
           />
+          {/* Kopieerknop, alleen zichtbaar bij hover op container */}
+          <button
+            onClick={copyPrompt}
+            title="Kopieer laatst verzonden prompt"
+            className="absolute right-4 bottom-2 opacity-0 group-hover:opacity-100 bg-zinc-700 px-3 py-1 rounded-md text-xs text-white hover:bg-zinc-600 transition"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={2}
+              viewBox="0 0 24 24"
+              className="w-4 h-4 inline-block mr-1"
+            >
+              <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+              <rect x="4" y="4" width="13" height="13" rx="2" ry="2" />
+            </svg>
+            Kopieer
+          </button>
         </div>
       </section>
 

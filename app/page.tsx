@@ -136,7 +136,7 @@ ${inputFields.instr4}
               key={i}
               className={`max-w-[80%] px-4 py-3 rounded-xl whitespace-pre-wrap ${
                 msg.role === "user"
-                  ? "self-end bg-green-500 text-white rounded-br-sm"
+                  ? "self-end bg-green-300 text-black rounded-br-sm"
                   : "self-start bg-zinc-700 text-white rounded-bl-sm"
               }`}
             >
@@ -170,20 +170,20 @@ ${inputFields.instr4}
       <aside className="w-80 flex flex-col gap-6 bg-zinc-800 rounded-3xl p-6 shadow-lg overflow-y-auto">
         {["1", "2", "3", "4"].map((num) => (
           <div key={num} className="flex flex-col">
-            <input
-              type="text"
+            <textarea
               name={`title${num}`}
               placeholder={`Titel ${num}`}
               value={inputFields[`title${num}` as keyof typeof inputFields]}
               onChange={handleFieldChange}
-              className="mb-2 rounded-md p-2 text-black h-10"
+              rows={2}
+              className="mb-2 rounded-md p-2 text-black resize-y"
             />
             <textarea
               name={`instr${num}`}
               placeholder={`Instructies ${num}`}
               value={inputFields[`instr${num}` as keyof typeof inputFields]}
               onChange={handleFieldChange}
-              rows={8}
+              rows={7}
               className="rounded-md p-2 text-black resize-y"
             />
             <hr className="mt-4 border-zinc-600" />

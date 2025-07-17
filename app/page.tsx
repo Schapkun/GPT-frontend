@@ -60,7 +60,6 @@ export default function ChatInterface() {
     setInputFields(prev => ({ ...prev, [e.target.name]: e.target.value }))
   }
 
-  // Verbeterde parse functie: splitst tekst in codeblokken en tekst, zonder afbreken
   const parseCodeBlocks = (text: string) => {
     const regex = /```(\w+)?\n([\s\S]*?)```/g
     const elements = []
@@ -68,7 +67,6 @@ export default function ChatInterface() {
     let match
 
     while ((match = regex.exec(text)) !== null) {
-      // Tekst vóór codeblok
       const before = text.substring(lastIndex, match.index)
       if (before.trim() !== "") {
         elements.push(
@@ -76,7 +74,6 @@ export default function ChatInterface() {
         )
       }
 
-      // Codeblok
       const lang = match[1] || "text"
       const code = match[2]
 
@@ -87,7 +84,6 @@ export default function ChatInterface() {
       lastIndex = regex.lastIndex
     }
 
-    // Rest van tekst na laatste codeblok
     const rest = text.substring(lastIndex)
     if (rest.trim() !== "") {
       elements.push(
@@ -216,9 +212,9 @@ ${inputFields.instr4}
   }
 
   return (
-    <div className="flex h-screen bg-zinc-900 text-white p-6 gap-6">
+    <div className="flex h-screen bg-[#101010] text-white p-6 gap-6">
       {/* Chat history links */}
-      <section className="flex-1 flex flex-col rounded-3xl bg-zinc-800 shadow-lg overflow-hidden">
+      <section className="flex-1 flex flex-col rounded-3xl bg-[#101010] shadow-lg overflow-hidden">
         <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
           {chatHistory.length === 0 && (
             <p className="text-zinc-400 select-none">Start een gesprek...</p>
@@ -228,7 +224,7 @@ ${inputFields.instr4}
               key={i}
               className={`max-w-[80%] px-4 py-3 rounded-xl whitespace-pre-wrap break-words ${
                 msg.role === "user"
-                  ? "self-end bg-slate-600 text-white rounded-br-sm"
+                  ? "self-end bg-[#303030] text-white rounded-br-sm"
                   : "self-start bg-transparent text-white rounded-bl-sm"
               }`}
             >
@@ -239,7 +235,7 @@ ${inputFields.instr4}
         </div>
 
         {/* Input prompt onderaan */}
-        <div className="border-t border-zinc-700 p-4 bg-zinc-900">
+        <div className="border-t border-zinc-700 p-4 bg-[#101010]">
           <textarea
             ref={promptRef}
             rows={1}

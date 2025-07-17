@@ -37,6 +37,19 @@ export default function ChatInterface() {
     title4: "", instr4: "",
   })
 
+  // Laad inputFields uit localStorage bij mount
+  useEffect(() => {
+    const savedFields = localStorage.getItem("chat_input_fields")
+    if (savedFields) {
+      setInputFields(JSON.parse(savedFields))
+    }
+  }, [])
+
+  // Sla inputFields op in localStorage bij elke wijziging
+  useEffect(() => {
+    localStorage.setItem("chat_input_fields", JSON.stringify(inputFields))
+  }, [inputFields])
+
   // Scroll automatisch naar beneden bij nieuwe berichten
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
@@ -221,11 +234,8 @@ ${inputFields.instr4}
               className={`max-w-[80%] px-4 py-3 rounded-xl whitespace-pre-wrap break-words ${
                 msg.role === "user"
                   ? "self-end bg-slate-600 text-white rounded-br-sm"
-                  : "self-start text-white rounded-bl-sm"
+                  : "self-start bg-zinc-700 text-white rounded-bl-sm"
               }`}
-              style={{
-                backgroundColor: msg.role === "assistant" ? "transparent" : undefined,
-              }}
             >
               {parseCodeBlocks(msg.content)}
             </div>

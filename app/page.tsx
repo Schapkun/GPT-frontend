@@ -198,42 +198,42 @@ ${inputFields.title4}:
 ${inputFields.instr4}
       `
 
-      const messagesForApi = [
-        { role: "system", content: systemContent.trim() },
-        ...chatHistory.map(m => ({ role: m.role, content: m.content })),
-        { role: "user", content: prompt }
-      ]
+    const messagesForApi = [
+      { role: "system", content: systemContent.trim() },
+      ...chatHistory.map(m => ({ role: m.role, content: m.content })),
+      { role: "user", content: prompt }
+    ]
 
-      const res = await fetch(`${API_BASE}/prompt`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          prompt: "",
-          chat_history: messagesForApi,
-        }),
-      })
+    const res = await fetch(`${API_BASE}/prompt`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        prompt: "",
+        chat_history: messagesForApi,
+      }),
+    })
 
-      if (!res.ok) {
-        const text = await res.text()
-        throw new Error(`Backend fout: ${res.status} ${res.statusText} — ${text}`)
-      }
-
-      const data = await res.json()
-
-      const aiMsg: ChatMessage = {
-        role: "assistant",
-        content: data.message || "Ik heb je prompt ontvangen.",
-        loading: false,
-      }
-
-      setChatHistory(prev => [...prev.slice(0, -1), aiMsg])
-    } catch (e: any) {
-      alert(e.message)
-      setChatHistory(prev => prev.filter(msg => !msg.loading))
-    } finally {
-      setLoading(false)
+    if (!res.ok) {
+      const text = await res.text()
+      throw new Error(`Backend fout: ${res.status} ${res.statusText} — ${text}`)
     }
+
+    const data = await res.json()
+
+    const aiMsg: ChatMessage = {
+      role: "assistant",
+      content: data.message || "Ik heb je prompt ontvangen.",
+      loading: false,
+    }
+
+    setChatHistory(prev => [...prev.slice(0, -1), aiMsg])
+  } catch (e: any) {
+    alert(e.message)
+    setChatHistory(prev => prev.filter(msg => !msg.loading))
+  } finally {
+    setLoading(false)
   }
+}
 
   // Verwijder alle chatgeschiedenis met confirm
   const clearChatHistory = () => {
@@ -274,18 +274,22 @@ ${inputFields.instr4}
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+        <div
+          className="flex-1 overflow-y-auto px-6 py-4 space-y-4"
+          style={{ maxWidth: "50%", margin: "0 auto" }} // Maak venster smaller en center
+        >
           {chatHistory.length === 0 && (
             <p className="text-zinc-400 select-none">Start een gesprek...</p>
           )}
           {chatHistory.map((msg, i) => (
             <div
               key={i}
-              className={`max-w-[80%] px-4 py-3 rounded-xl whitespace-pre-wrap break-words ${
+              className={`px-4 py-3 rounded-xl whitespace-pre-wrap break-words ${
                 msg.role === "user"
-                  ? "self-end bg-[#303030] text-white rounded-br-sm"
-                  : "self-start bg-transparent text-white rounded-bl-sm"
+                  ? "self-end bg-[#303030] text-white rounded-br-sm max-w-full"
+                  : "self-start bg-transparent text-white rounded-bl-sm max-w-full"
               }`}
+              style={{ textAlign: "left" }}
             >
               {parseCodeBlocks(msg.content)}
             </div>
@@ -317,23 +321,23 @@ ${inputFields.instr4}
       <aside className="w-80 flex flex-col gap-6 bg-zinc-800 rounded-3xl p-6 shadow-lg overflow-y-auto">
         {["1", "2", "3", "4"].map((num) => (
           <div key={num} className="flex flex-col">
-            <div className="flex justify-between items-center">
-              <input
-                type="text"
-                name={`title${num}`}
-                placeholder={`Titel ${num}`}
-                value={inputFields[`title${num}` as keyof InputFields]}
-                onChange={handleFieldChange}
-                className="mb-2 rounded-md p-2 text-black h-10 flex-grow"
-              />
+            <div className="flex justify-end">
               <button
                 onClick={() => clearInputField(Number(num))}
-                className="ml-2 text-red-500 hover:text-red-400 text-sm font-semibold"
+                className="text-red-500 hover:text-red-400 text-sm font-semibold"
                 title={`Verwijder titel en instructies ${num}`}
               >
                 Verwijder
               </button>
             </div>
+            <input
+              type="text"
+              name={`title${num}`}
+              placeholder={`Titel ${num}`}
+              value={inputFields[`title${num}` as keyof InputFields]}
+              onChange={handleFieldChange}
+              className="mb-2 rounded-md p-2 text-black h-10"
+            />
             <textarea
               name={`instr${num}`}
               placeholder={`Instructies ${num}`}

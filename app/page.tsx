@@ -37,6 +37,26 @@ export default function ChatInterface() {
     title4: "", instr4: "",
   })
 
+  // Laad chatHistory en inputFields uit localStorage bij mount
+  useEffect(() => {
+    const savedChat = localStorage.getItem("chatHistory")
+    if (savedChat) setChatHistory(JSON.parse(savedChat))
+
+    const savedInputs = localStorage.getItem("inputFields")
+    if (savedInputs) setInputFields(JSON.parse(savedInputs))
+  }, [])
+
+  // Sla chatHistory op in localStorage bij wijziging
+  useEffect(() => {
+    localStorage.setItem("chatHistory", JSON.stringify(chatHistory))
+  }, [chatHistory])
+
+  // Sla inputFields op in localStorage bij wijziging
+  useEffect(() => {
+    localStorage.setItem("inputFields", JSON.stringify(inputFields))
+  }, [inputFields])
+
+  // Scroll automatisch naar beneden bij nieuwe berichten
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [chatHistory])
@@ -211,10 +231,45 @@ ${inputFields.instr4}
     }
   }
 
+  // Verwijder alle chatgeschiedenis met confirm
+  const clearChatHistory = () => {
+    if (confirm("Weet je zeker dat je de hele chatgeschiedenis wilt verwijderen?")) {
+      setChatHistory([])
+      localStorage.removeItem("chatHistory")
+    }
+  }
+
+  // Verwijder inputveld (titel + instructies) met confirm
+  const clearInputField = (num: number) => {
+    if (confirm(`Weet je zeker dat je titel en instructies ${num} wilt verwijderen?`)) {
+      setInputFields(prev => ({
+        ...prev,
+        [`title${num}`]: "",
+        [`instr${num}`]: ""
+      }))
+      localStorage.setItem("inputFields", JSON.stringify({
+        ...inputFields,
+        [`title${num}`]: "",
+        [`instr${num}`]: ""
+      }))
+    }
+  }
+
   return (
     <div className="flex h-screen bg-[#101010] text-white p-6 gap-6">
       {/* Chat history links */}
       <section className="flex-1 flex flex-col rounded-3xl bg-[#101010] shadow-lg overflow-hidden">
+        <div className="border-b border-zinc-700 p-3 flex justify-between items-center">
+          <h2 className="text-lg font-semibold">Chatgeschiedenis</h2>
+          <button
+            onClick={clearChatHistory}
+            className="text-red-500 hover:text-red-400 text-sm font-semibold"
+            title="Verwijder alle chatgeschiedenis"
+          >
+            Verwijder alles
+          </button>
+        </div>
+
         <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
           {chatHistory.length === 0 && (
             <p className="text-zinc-400 select-none">Start een gesprek...</p>
@@ -258,14 +313,23 @@ ${inputFields.instr4}
       <aside className="w-80 flex flex-col gap-6 bg-zinc-800 rounded-3xl p-6 shadow-lg overflow-y-auto">
         {["1", "2", "3", "4"].map((num) => (
           <div key={num} className="flex flex-col">
-            <input
-              type="text"
-              name={`title${num}`}
-              placeholder={`Titel ${num}`}
-              value={inputFields[`title${num}` as keyof InputFields]}
-              onChange={handleFieldChange}
-              className="mb-2 rounded-md p-2 text-black h-10"
-            />
+            <div className="flex justify-between items-center">
+              <input
+                type="text"
+                name={`title${num}`}
+                placeholder={`Titel ${num}`}
+                value={inputFields[`title${num}` as keyof InputFields]}
+                onChange={handleFieldChange}
+                className="mb-2 rounded-md p-2 text-black h-10 flex-grow"
+              />
+              <button
+                onClick={() => clearInputField(Number(num))}
+                className="ml-2 text-red-500 hover:text-red-400 text-sm font-semibold"
+                title={`Verwijder titel en instructies ${num}`}
+              >
+                Verwijder
+              </button>
+            </div>
             <textarea
               name={`instr${num}`}
               placeholder={`Instructies ${num}`}

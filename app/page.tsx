@@ -22,7 +22,7 @@ interface InputFields {
 }
 
 export default function ChatInterface() {
-  const API_BASE = "https://gpt-backend-qkjf.onrender.com" // Pas aan naar jouw backend URL
+  const API_BASE = "https://gpt-backend-qkjf.onrender.com"
 
   const [prompt, setPrompt] = useState("")
   const [chatHistory, setChatHistory] = useState<ChatMessage[]>([])
@@ -61,7 +61,6 @@ export default function ChatInterface() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [chatHistory])
 
-  // Prompt textarea aanpassen: min 4 regels, max 10 regels
   const handlePromptChange = (e: ChangeEvent<HTMLTextAreaElement>) => {
     const textarea = e.target
     const minRows = 4
@@ -169,12 +168,49 @@ export default function ChatInterface() {
     )
   }
 
+  // Nieuw component voor gebruikers prompt met hover kopieerknop
+  const UserMessage = ({ content }: { content: string }) => {
+    const [hover, setHover] = useState(false)
+    const copyToClipboard = () => {
+      navigator.clipboard.writeText(content)
+    }
+
+    return (
+      <div
+        onMouseEnter={() => setHover(true)}
+        onMouseLeave={() => setHover(false)}
+        className="relative max-w-full px-4 py-3 rounded-xl whitespace-pre-wrap break-words self-end bg-[#303030] text-white rounded-br-sm"
+        style={{ textAlign: "left" }}
+      >
+        {content}
+        {hover && (
+          <button
+            onClick={copyToClipboard}
+            title="Kopieer prompt"
+            className="absolute top-1 right-1 w-7 h-7 border-2 border-white rounded-sm flex justify-center items-center text-white hover:bg-white hover:text-black transition"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={2}
+              viewBox="0 0 24 24"
+              className="w-4 h-4"
+            >
+              <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+              <rect x="4" y="4" width="13" height="13" rx="2" ry="2" />
+            </svg>
+          </button>
+        )}
+      </div>
+    )
+  }
+
   const [lastUserPrompt, setLastUserPrompt] = useState<string | null>(null)
 
   const handleSubmit = async () => {
     if (prompt.trim() === "") return
 
-    // Sla laatst verstuurde prompt op voor kopieerknop
     setLastUserPrompt(prompt)
 
     const userMsg: ChatMessage = { role: "user", content: prompt }
@@ -265,13 +301,6 @@ ${inputFields.instr4}
     }
   }
 
-  // Kopieer prompt functie
-  const copyPrompt = () => {
-    if (lastUserPrompt) {
-      navigator.clipboard.writeText(lastUserPrompt)
-    }
-  }
-
   return (
     <div className="flex h-screen bg-[#101010] text-white p-6 gap-6">
       {/* Chat history links */}
@@ -289,24 +318,24 @@ ${inputFields.instr4}
 
         <div
           className="flex-1 overflow-y-auto px-6 py-4 space-y-4"
-          style={{ maxWidth: "50%", margin: "0 auto" }} // Maak venster smaller en center
+          style={{ maxWidth: "50%", margin: "0 auto" }}
         >
           {chatHistory.length === 0 && (
             <p className="text-zinc-400 select-none">Start een gesprek...</p>
           )}
-          {chatHistory.map((msg, i) => (
-            <div
-              key={i}
-              className={`px-4 py-3 rounded-xl whitespace-pre-wrap break-words ${
-                msg.role === "user"
-                  ? "self-end bg-[#303030] text-white rounded-br-sm max-w-full"
-                  : "self-start bg-transparent text-white rounded-bl-sm max-w-full"
-              }`}
-              style={{ textAlign: "left" }}
-            >
-              {parseCodeBlocks(msg.content)}
-            </div>
-          ))}
+          {chatHistory.map((msg, i) =>
+            msg.role === "user" ? (
+              <UserMessage key={i} content={msg.content} />
+            ) : (
+              <div
+                key={i}
+                className="px-4 py-3 rounded-xl whitespace-pre-wrap break-words self-start bg-transparent text-white rounded-bl-sm max-w-full"
+                style={{ textAlign: "left" }}
+              >
+                {parseCodeBlocks(msg.content)}
+              </div>
+            )
+          )}
           <div ref={messagesEndRef} />
         </div>
 
@@ -327,15 +356,6 @@ ${inputFields.instr4}
             placeholder="Typ hier je vraag..."
             className="w-full resize-none rounded-xl bg-zinc-700 p-3 text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-green-500"
           />
-          {lastUserPrompt && (
-            <button
-              onClick={copyPrompt}
-              className="self-end bg-zinc-700 px-3 py-1 rounded-md text-xs text-white hover:bg-zinc-600 transition"
-              title="Kopieer laatst verzonden prompt"
-            >
-              Kopieer prompt
-            </button>
-          )}
         </div>
       </section>
 
@@ -343,7 +363,7 @@ ${inputFields.instr4}
       <aside
         className="w-80 flex flex-col gap-6 bg-zinc-800 rounded-3xl p-6 shadow-lg overflow-y-auto"
         style={{
-          scrollbarColor: "#000000 transparent", // zwarte scrollbar
+          scrollbarColor: "#000000 transparent",
           scrollbarWidth: "thin",
         }}
       >

@@ -297,7 +297,7 @@ ${inputFields.instr4}
         <div className="border-t border-zinc-700 p-4 bg-[#101010]">
           <textarea
             ref={promptRef}
-            rows={3}
+            rows={4}
             maxLength={20000}
             value={prompt}
             onChange={handlePromptChange}

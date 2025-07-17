@@ -113,13 +113,6 @@ export default function ChatInterface() {
             placeholder="Typ hier je vraag..."
             rows={3}
           />
-          <button
-            onClick={handleSubmit}
-            disabled={loading}
-            className="bg-green-600 hover:bg-green-500 px-4 py-2 text-sm rounded-full font-medium disabled:opacity-50"
-          >
-            Genereer antwoord
-          </button>
         </div>
       </div>
     </div>

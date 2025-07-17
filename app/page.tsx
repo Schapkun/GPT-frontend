@@ -221,8 +221,11 @@ ${inputFields.instr4}
               className={`max-w-[80%] px-4 py-3 rounded-xl whitespace-pre-wrap break-words ${
                 msg.role === "user"
                   ? "self-end bg-slate-600 text-white rounded-br-sm"
-                  : "self-start bg-zinc-700 text-white rounded-bl-sm"
+                  : "self-start text-white rounded-bl-sm"
               }`}
+              style={{
+                backgroundColor: msg.role === "assistant" ? "transparent" : undefined,
+              }}
             >
               {parseCodeBlocks(msg.content)}
             </div>
@@ -235,7 +238,7 @@ ${inputFields.instr4}
           <textarea
             ref={promptRef}
             rows={1}
-            maxLength={2000}
+            maxLength={20000}
             value={prompt}
             onChange={handlePromptChange}
             onKeyDown={(e) => {

@@ -37,7 +37,6 @@ export default function ChatInterface() {
     title4: "", instr4: "",
   })
 
-  // Laad chatHistory en inputFields uit localStorage bij mount
   useEffect(() => {
     const savedChat = localStorage.getItem("chatHistory")
     if (savedChat) setChatHistory(JSON.parse(savedChat))
@@ -46,22 +45,18 @@ export default function ChatInterface() {
     if (savedInputs) setInputFields(JSON.parse(savedInputs))
   }, [])
 
-  // Sla chatHistory op in localStorage bij wijziging
   useEffect(() => {
     localStorage.setItem("chatHistory", JSON.stringify(chatHistory))
   }, [chatHistory])
 
-  // Sla inputFields op in localStorage bij wijziging
   useEffect(() => {
     localStorage.setItem("inputFields", JSON.stringify(inputFields))
   }, [inputFields])
 
-  // Scroll automatisch naar beneden bij nieuwe berichten
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [chatHistory])
 
-  // Prompt textarea aanpassen: min 4 regels, max 10 regels, nooit minder dan 4
   const handlePromptChange = (e: ChangeEvent<HTMLTextAreaElement>) => {
     const textarea = e.target
     const minRows = 4
@@ -169,7 +164,7 @@ export default function ChatInterface() {
     )
   }
 
-  // Component voor user message met kopieerknop (dubbele vierkant)
+  // User message met kopieerknop op hover
   const UserMessage = ({ content }: { content: string }) => {
     const [hover, setHover] = useState(false)
     const copyToClipboard = () => {
@@ -188,7 +183,7 @@ export default function ChatInterface() {
           <button
             onClick={copyToClipboard}
             title="Kopieer prompt"
-            className="absolute top-1 right-1 w-7 h-7 border-2 border-white rounded-sm flex justify-center items-center text-white hover:bg-white hover:text-black transition"
+            className="absolute bottom-1 right-1 w-7 h-7 border-2 border-white rounded-sm flex justify-center items-center text-white hover:bg-white hover:text-black transition"
             aria-label="Kopieer prompt"
           >
             <svg
@@ -279,7 +274,6 @@ ${inputFields.instr4}
     }
   }
 
-  // Verwijder alle chatgeschiedenis met confirm
   const clearChatHistory = () => {
     if (confirm("Weet je zeker dat je de hele chatgeschiedenis wilt verwijderen?")) {
       setChatHistory([])
@@ -287,7 +281,6 @@ ${inputFields.instr4}
     }
   }
 
-  // Verwijder inputveld (titel + instructies) met confirm
   const clearInputField = (num: number) => {
     if (confirm(`Weet je zeker dat je titel en instructies ${num} wilt verwijderen?`)) {
       setInputFields(prev => ({
@@ -303,7 +296,6 @@ ${inputFields.instr4}
     }
   }
 
-  // Kopieer prompt functie
   const copyPrompt = () => {
     if (lastUserPrompt) {
       navigator.clipboard.writeText(lastUserPrompt)
@@ -312,8 +304,7 @@ ${inputFields.instr4}
 
   return (
     <div className="flex h-screen bg-[#101010] text-white p-6 gap-6">
-      {/* Chat history links */}
-      <section className="flex-1 flex flex-col rounded-3xl bg-[#101010] shadow-lg overflow-hidden">
+      <section className="flex-1 flex flex-col rounded-3xl bg-[#101010] shadow-lg overflow-hidden max-w-[900px] mx-auto">
         <div className="border-b border-zinc-700 p-3 flex justify-between items-center">
           <h2 className="text-lg font-semibold">Chatgeschiedenis</h2>
           <button
@@ -325,14 +316,7 @@ ${inputFields.instr4}
           </button>
         </div>
 
-        <div
-          className="flex-1 overflow-y-auto px-6 py-4 space-y-4"
-          style={{
-            maxWidth: "2500px",
-            margin: "0 auto",
-            textAlign: "left",
-          }}
-        >
+        <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4" style={{ textAlign: "left" }}>
           {chatHistory.length === 0 && (
             <p className="text-zinc-400 select-none">Start een gesprek...</p>
           )}
@@ -351,10 +335,7 @@ ${inputFields.instr4}
           <div ref={messagesEndRef} />
         </div>
 
-        {/* Input prompt onderaan */}
-        <div
-          className="border-t border-zinc-700 p-4 bg-[#101010] flex flex-col gap-2 relative max-w-[2500px] mx-auto group"
-        >
+        <div className="border-t border-zinc-700 p-4 bg-[#101010] flex flex-col gap-2 relative group">
           <textarea
             ref={promptRef}
             rows={4}
@@ -370,11 +351,10 @@ ${inputFields.instr4}
             placeholder="Typ hier je vraag..."
             className="w-full resize-none rounded-xl bg-zinc-700 p-3 text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-green-500"
           />
-          {/* Kopieerknop, alleen zichtbaar bij hover op container */}
           <button
             onClick={copyPrompt}
             title="Kopieer laatst verzonden prompt"
-            className="absolute right-4 bottom-2 opacity-0 group-hover:opacity-100 bg-zinc-700 px-3 py-1 rounded-md text-xs text-white hover:bg-zinc-600 transition"
+            className="absolute right-4 bottom-2 opacity-0 group-hover:opacity-100 bg-zinc-700 px-3 py-1 rounded-md text-xs text-white hover:bg-zinc-600 transition flex items-center gap-1"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -382,7 +362,7 @@ ${inputFields.instr4}
               stroke="currentColor"
               strokeWidth={2}
               viewBox="0 0 24 24"
-              className="w-4 h-4 inline-block mr-1"
+              className="w-4 h-4 inline-block"
             >
               <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
               <rect x="4" y="4" width="13" height="13" rx="2" ry="2" />
@@ -392,7 +372,6 @@ ${inputFields.instr4}
         </div>
       </section>
 
-      {/* Sidebar met 4 inputvelden en titels */}
       <aside
         className="w-80 flex flex-col gap-6 bg-zinc-800 rounded-3xl p-6 shadow-lg overflow-y-auto"
         style={{
@@ -402,7 +381,7 @@ ${inputFields.instr4}
       >
         {["1", "2", "3", "4"].map((num) => (
           <div key={num} className="flex flex-col">
-            <div className="flex justify-end">e
+            <div className="flex justify-end">
               <button
                 onClick={() => clearInputField(Number(num))}
                 className="text-red-500 hover:text-red-400 text-sm font-semibold"

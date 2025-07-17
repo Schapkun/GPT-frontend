@@ -61,6 +61,7 @@ export default function ChatInterface() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [chatHistory])
 
+  // Prompt textarea aanpassen: min 4 regels, max 10 regels, nooit minder dan 4
   const handlePromptChange = (e: ChangeEvent<HTMLTextAreaElement>) => {
     const textarea = e.target
     const minRows = 4
@@ -70,7 +71,7 @@ export default function ChatInterface() {
     if (currentRows > maxRows) {
       textarea.rows = maxRows
       textarea.style.overflowY = "auto"
-    } else if (currentRows > minRows) {
+    } else if (currentRows >= minRows) {
       textarea.rows = currentRows
       textarea.style.overflowY = "hidden"
     } else {
@@ -168,7 +169,7 @@ export default function ChatInterface() {
     )
   }
 
-  // Nieuw component voor gebruikers prompt met hover kopieerknop
+  // Component voor user message met kopieerknop (dubbele vierkant)
   const UserMessage = ({ content }: { content: string }) => {
     const [hover, setHover] = useState(false)
     const copyToClipboard = () => {
@@ -188,6 +189,7 @@ export default function ChatInterface() {
             onClick={copyToClipboard}
             title="Kopieer prompt"
             className="absolute top-1 right-1 w-7 h-7 border-2 border-white rounded-sm flex justify-center items-center text-white hover:bg-white hover:text-black transition"
+            aria-label="Kopieer prompt"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -242,7 +244,7 @@ ${inputFields.instr4}
 
       const messagesForApi = [
         { role: "system", content: systemContent.trim() },
-        ...chatHistory.map(m => ({ role: m.role, content: m.content })),
+        ...chatHistory.filter(m => !m.loading).map(m => ({ role: m.role, content: m.content })),
         { role: "user", content: prompt }
       ]
 
@@ -318,7 +320,11 @@ ${inputFields.instr4}
 
         <div
           className="flex-1 overflow-y-auto px-6 py-4 space-y-4"
-          style={{ maxWidth: "50%", margin: "0 auto" }}
+          style={{
+            maxWidth: "600px",
+            margin: "0 auto",
+            textAlign: "left",
+          }}
         >
           {chatHistory.length === 0 && (
             <p className="text-zinc-400 select-none">Start een gesprek...</p>
@@ -330,7 +336,6 @@ ${inputFields.instr4}
               <div
                 key={i}
                 className="px-4 py-3 rounded-xl whitespace-pre-wrap break-words self-start bg-transparent text-white rounded-bl-sm max-w-full"
-                style={{ textAlign: "left" }}
               >
                 {parseCodeBlocks(msg.content)}
               </div>
@@ -340,7 +345,10 @@ ${inputFields.instr4}
         </div>
 
         {/* Input prompt onderaan */}
-        <div className="border-t border-zinc-700 p-4 bg-[#101010] flex flex-col gap-2">
+        <div
+          className="border-t border-zinc-700 p-4 bg-[#101010] flex flex-col gap-2"
+          style={{ maxWidth: 600, margin: "0 auto" }}
+        >
           <textarea
             ref={promptRef}
             rows={4}

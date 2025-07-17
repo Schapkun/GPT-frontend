@@ -61,9 +61,10 @@ export default function ChatInterface() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [chatHistory])
 
+  // Prompt textarea aanpassen: min 4 regels, max 10 regels
   const handlePromptChange = (e: ChangeEvent<HTMLTextAreaElement>) => {
     const textarea = e.target
-    const minRows = 3
+    const minRows = 4
     const maxRows = 10
     textarea.rows = minRows
     const currentRows = Math.floor(textarea.scrollHeight / 24)
@@ -168,8 +169,13 @@ export default function ChatInterface() {
     )
   }
 
+  const [lastUserPrompt, setLastUserPrompt] = useState<string | null>(null)
+
   const handleSubmit = async () => {
     if (prompt.trim() === "") return
+
+    // Sla laatst verstuurde prompt op voor kopieerknop
+    setLastUserPrompt(prompt)
 
     const userMsg: ChatMessage = { role: "user", content: prompt }
     const loadingMsg: ChatMessage = { role: "assistant", content: "...", loading: true }
@@ -177,7 +183,7 @@ export default function ChatInterface() {
     setChatHistory(prev => [...prev, userMsg, loadingMsg])
     setPrompt("")
     if (promptRef.current) {
-      promptRef.current.rows = 1
+      promptRef.current.rows = 4
       promptRef.current.style.overflowY = "hidden"
     }
 
@@ -198,42 +204,42 @@ ${inputFields.title4}:
 ${inputFields.instr4}
       `
 
-    const messagesForApi = [
-      { role: "system", content: systemContent.trim() },
-      ...chatHistory.map(m => ({ role: m.role, content: m.content })),
-      { role: "user", content: prompt }
-    ]
+      const messagesForApi = [
+        { role: "system", content: systemContent.trim() },
+        ...chatHistory.map(m => ({ role: m.role, content: m.content })),
+        { role: "user", content: prompt }
+      ]
 
-    const res = await fetch(`${API_BASE}/prompt`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        prompt: "",
-        chat_history: messagesForApi,
-      }),
-    })
+      const res = await fetch(`${API_BASE}/prompt`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          prompt: "",
+          chat_history: messagesForApi,
+        }),
+      })
 
-    if (!res.ok) {
-      const text = await res.text()
-      throw new Error(`Backend fout: ${res.status} ${res.statusText} — ${text}`)
+      if (!res.ok) {
+        const text = await res.text()
+        throw new Error(`Backend fout: ${res.status} ${res.statusText} — ${text}`)
+      }
+
+      const data = await res.json()
+
+      const aiMsg: ChatMessage = {
+        role: "assistant",
+        content: data.message || "Ik heb je prompt ontvangen.",
+        loading: false,
+      }
+
+      setChatHistory(prev => [...prev.slice(0, -1), aiMsg])
+    } catch (e: any) {
+      alert(e.message)
+      setChatHistory(prev => prev.filter(msg => !msg.loading))
+    } finally {
+      setLoading(false)
     }
-
-    const data = await res.json()
-
-    const aiMsg: ChatMessage = {
-      role: "assistant",
-      content: data.message || "Ik heb je prompt ontvangen.",
-      loading: false,
-    }
-
-    setChatHistory(prev => [...prev.slice(0, -1), aiMsg])
-  } catch (e: any) {
-    alert(e.message)
-    setChatHistory(prev => prev.filter(msg => !msg.loading))
-  } finally {
-    setLoading(false)
   }
-}
 
   // Verwijder alle chatgeschiedenis met confirm
   const clearChatHistory = () => {
@@ -256,6 +262,13 @@ ${inputFields.instr4}
         [`title${num}`]: "",
         [`instr${num}`]: ""
       }))
+    }
+  }
+
+  // Kopieer prompt functie
+  const copyPrompt = () => {
+    if (lastUserPrompt) {
+      navigator.clipboard.writeText(lastUserPrompt)
     }
   }
 
@@ -298,7 +311,7 @@ ${inputFields.instr4}
         </div>
 
         {/* Input prompt onderaan */}
-        <div className="border-t border-zinc-700 p-4 bg-[#101010]">
+        <div className="border-t border-zinc-700 p-4 bg-[#101010] flex flex-col gap-2">
           <textarea
             ref={promptRef}
             rows={4}
@@ -314,11 +327,26 @@ ${inputFields.instr4}
             placeholder="Typ hier je vraag..."
             className="w-full resize-none rounded-xl bg-zinc-700 p-3 text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-green-500"
           />
+          {lastUserPrompt && (
+            <button
+              onClick={copyPrompt}
+              className="self-end bg-zinc-700 px-3 py-1 rounded-md text-xs text-white hover:bg-zinc-600 transition"
+              title="Kopieer laatst verzonden prompt"
+            >
+              Kopieer prompt
+            </button>
+          )}
         </div>
       </section>
 
       {/* Sidebar met 4 inputvelden en titels */}
-      <aside className="w-80 flex flex-col gap-6 bg-zinc-800 rounded-3xl p-6 shadow-lg overflow-y-auto">
+      <aside
+        className="w-80 flex flex-col gap-6 bg-zinc-800 rounded-3xl p-6 shadow-lg overflow-y-auto"
+        style={{
+          scrollbarColor: "#000000 transparent", // zwarte scrollbar
+          scrollbarWidth: "thin",
+        }}
+      >
         {["1", "2", "3", "4"].map((num) => (
           <div key={num} className="flex flex-col">
             <div className="flex justify-end">

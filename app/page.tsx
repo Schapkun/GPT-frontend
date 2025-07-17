@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, ChangeEvent } from "react"
 
 interface ChatMessage {
   role: "user" | "assistant"
@@ -13,134 +13,79 @@ export default function ChatInterface() {
 
   const [prompt, setPrompt] = useState("")
   const [chatHistory, setChatHistory] = useState<ChatMessage[]>([])
-  const [instructies, setInstructies] = useState("") // Opslag van instructies
   const [loading, setLoading] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement | null>(null)
-  const [copyStatus, setCopyStatus] = useState<{ [key: number]: boolean }>({})
+  const promptRef = useRef<HTMLTextAreaElement>(null)
 
-  useEffect(() => {
-    const saved = localStorage.getItem("chat_instructies")
-    if (saved) setInstructies(saved)
-  }, [])
+  // Vier aparte inputvelden ter vervanging van instructies
+  const [inputFields, setInputFields] = useState({
+    title1: "",
+    title2: "",
+    title3: "",
+    title4: "",
+  })
 
-  useEffect(() => {
-    localStorage.setItem("chat_instructies", instructies)
-  }, [instructies])
-
+  // Scroll automatisch naar onder bij nieuwe berichten
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [chatHistory])
 
-  // Functie om code te kopiëren en status te tonen
-  const copyToClipboard = (content: string, index: number) => {
-    navigator.clipboard.writeText(content).then(() => {
-      setCopyStatus((prev) => ({ ...prev, [index]: true }))
-      setTimeout(() => {
-        setCopyStatus((prev) => ({ ...prev, [index]: false }))
-      }, 2000)
-    })
+  // Beheer tekstarea grootte max 10 regels
+  const handlePromptChange = (e: ChangeEvent<HTMLTextAreaElement>) => {
+    const textarea = e.target
+    const maxRows = 10
+    textarea.rows = 1 // reset rows om scrollHeight goed te meten
+    const currentRows = Math.floor(textarea.scrollHeight / 24) // 24px is approx line height
+    if (currentRows > maxRows) {
+      textarea.rows = maxRows
+      textarea.style.overflowY = "auto"
+    } else {
+      textarea.rows = currentRows
+      textarea.style.overflowY = "hidden"
+    }
+    setPrompt(textarea.value)
   }
 
-  // Helper: check of content een codeblok bevat (bijv. begint met <html> of ``` enz)
-  const isCodeBlock = (text: string) => {
-    const trimmed = text.trim()
-    return trimmed.startsWith("<") || trimmed.startsWith("```")
+  // Handle verandering in rechter inputvelden
+  const handleFieldChange = (e: ChangeEvent<HTMLInputElement>) => {
+    setInputFields(prev => ({ ...prev, [e.target.name]: e.target.value }))
   }
 
-  return (
-    <div className="flex h-screen bg-zinc-900 text-white justify-center items-center p-4">
-      <div className="w-full max-w-3xl flex flex-col gap-4">
-        <h1 className="text-3xl font-extrabold mb-4">Chat met OpenAI</h1>
-
-        {/* Instructies invoerveld */}
-        <textarea
-          value={instructies}
-          onChange={(e) => setInstructies(e.target.value)}
-          className="w-full bg-zinc-800 p-3 rounded text-white resize-none placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-green-500"
-          placeholder="Voeg hier je instructies toe (optioneel)"
-          rows={4}
-        />
-
-        {/* Chatvenster */}
-        <div className="flex-1 overflow-auto mt-2 max-h-[90vh] bg-zinc-800 p-4 rounded shadow-inner">
-          <div className="flex flex-col gap-4">
-            {chatHistory.map((msg, idx) => (
-              <div
-                key={idx}
-                className={`p-3 rounded-lg max-w-[90%] ${
-                  msg.role === "user"
-                    ? "self-end bg-green-100 text-black"
-                    : "self-start bg-gray-100 text-black"
-                }`}
-              >
-                {/* Als bericht een codeblok is, render speciaal met kopieerknop */}
-                {msg.loading ? (
-                  <div className="text-xs italic text-zinc-500 mt-1 animate-pulse">
-                    AI is aan het typen...
-                  </div>
-                ) : isCodeBlock(msg.content) && msg.role === "assistant" ? (
-                  <div className="relative border border-gray-700 rounded p-2 bg-black text-white max-h-72 overflow-auto">
-                    <button
-                      onClick={() => copyToClipboard(msg.content, idx)}
-                      className="sticky top-0 bg-zinc-900 bg-opacity-90 text-sm px-3 py-1 rounded mb-2 hover:bg-green-600 transition"
-                      style={{ zIndex: 10 }}
-                    >
-                      {copyStatus[idx] ? "Gekopieerd!" : "Kopieer"}
-                    </button>
-                    <pre className="whitespace-pre-wrap">{msg.content}</pre>
-                  </div>
-                ) : (
-                  <div className="whitespace-pre-line">{msg.content}</div>
-                )}
-              </div>
-            ))}
-            <div ref={messagesEndRef} />
-          </div>
-        </div>
-
-        {/* Prompt invoer */}
-        <div className="mt-4 flex items-center gap-2">
-          <textarea
-            value={prompt}
-            onChange={(e) => setPrompt(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault()
-                handleSubmit()
-              }
-            }}
-            className="flex-grow bg-zinc-800 p-3 rounded text-white resize-none placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-green-500"
-            placeholder="Typ hier je vraag..."
-            rows={3}
-          />
-        </div>
-      </div>
-    </div>
-  )
-
-  async function handleSubmit() {
+  const handleSubmit = async () => {
     if (prompt.trim() === "") return
 
     const userMsg: ChatMessage = { role: "user", content: prompt }
     const loadingMsg: ChatMessage = { role: "assistant", content: "...", loading: true }
 
-    setChatHistory((prev) => [...prev, userMsg, loadingMsg])
+    setChatHistory(prev => [...prev, userMsg, loadingMsg])
     setPrompt("")
+    if (promptRef.current) {
+      promptRef.current.rows = 1
+      promptRef.current.style.overflowY = "hidden"
+    }
 
     try {
       setLoading(true)
 
+      // Combineer de inputvelden als system message content (JSON-string of simpel tekst)
+      const systemContent = `
+Title 1: ${inputFields.title1}
+Title 2: ${inputFields.title2}
+Title 3: ${inputFields.title3}
+Title 4: ${inputFields.title4}
+`
+
       const messagesForApi = [
-        { role: "system", content: instructies || "Je bent een behulpzame assistent." },
-        ...chatHistory.map((m) => ({ role: m.role, content: m.content })),
-        { role: "user", content: prompt },
+        { role: "system", content: systemContent.trim() },
+        ...chatHistory.map(m => ({ role: m.role, content: m.content })),
+        { role: "user", content: prompt }
       ]
 
       const res = await fetch(`${API_BASE}/prompt`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          prompt: "",
+          prompt: "",  // leeg want alles in chat_history
           chat_history: messagesForApi,
         }),
       })
@@ -158,12 +103,84 @@ export default function ChatInterface() {
         loading: false,
       }
 
-      setChatHistory((prev) => [...prev.slice(0, -1), aiMsg])
+      setChatHistory(prev => [...prev.slice(0, -1), aiMsg])
     } catch (e: any) {
       alert(e.message)
-      setChatHistory((prev) => prev.filter((msg) => !msg.loading))
+      setChatHistory(prev => prev.filter(msg => !msg.loading))
     } finally {
       setLoading(false)
     }
   }
+
+  return (
+    <div className="flex h-screen bg-zinc-900 text-white p-6 gap-6">
+      {/* Chat history links */}
+      <section className="flex-1 flex flex-col rounded-3xl bg-zinc-800 shadow-lg overflow-hidden">
+        <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+          {chatHistory.length === 0 && (
+            <p className="text-zinc-400 select-none">Start een gesprek...</p>
+          )}
+          {chatHistory.map((msg, i) => (
+            <div
+              key={i}
+              className={`max-w-[80%] px-4 py-3 rounded-xl whitespace-pre-wrap ${
+                msg.role === "user"
+                  ? "self-end bg-green-500 text-white rounded-br-sm"
+                  : "self-start bg-zinc-700 text-white rounded-bl-sm"
+              }`}
+            >
+              {msg.content}
+            </div>
+          ))}
+          <div ref={messagesEndRef} />
+        </div>
+
+        {/* Input prompt onderaan */}
+        <div className="border-t border-zinc-700 p-4 bg-zinc-900">
+          <textarea
+            ref={promptRef}
+            rows={1}
+            maxLength={2000}
+            value={prompt}
+            onChange={handlePromptChange}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault()
+                if (!loading) handleSubmit()
+              }
+            }}
+            placeholder="Typ hier je vraag..."
+            className="w-full resize-none rounded-xl bg-zinc-700 p-3 text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-green-500"
+          />
+          <button
+            onClick={() => !loading && handleSubmit()}
+            disabled={loading}
+            className="mt-3 w-full rounded-xl bg-green-600 py-3 font-semibold hover:bg-green-500 disabled:opacity-50"
+          >
+            {loading ? "Even geduld..." : "Genereer antwoord"}
+          </button>
+        </div>
+      </section>
+
+      {/* Sidebar met 4 inputvelden */}
+      <aside className="w-80 flex flex-col gap-4 bg-zinc-800 rounded-3xl p-6 shadow-lg">
+        <h2 className="text-xl font-semibold mb-2">Extra Invoer Velden</h2>
+        {["title1", "title2", "title3", "title4"].map((field) => (
+          <div key={field} className="flex flex-col">
+            <label htmlFor={field} className="mb-1 text-zinc-300 capitalize">
+              {field.replace("title", "Titel ")}
+            </label>
+            <input
+              id={field}
+              name={field}
+              type="text"
+              className="rounded-md p-2 text-black"
+              value={inputFields[field as keyof typeof inputFields]}
+              onChange={handleFieldChange}
+            />
+          </div>
+        ))}
+      </aside>
+    </div>
+  )
 }

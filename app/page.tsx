@@ -328,7 +328,7 @@ ${inputFields.instr4}
         <div
           className="flex-1 overflow-y-auto px-6 py-4 space-y-4"
           style={{
-            maxWidth: "900px",
+            maxWidth: "2500px",
             margin: "0 auto",
             textAlign: "left",
           }}
@@ -353,7 +353,7 @@ ${inputFields.instr4}
 
         {/* Input prompt onderaan */}
         <div
-          className="border-t border-zinc-700 p-4 bg-[#101010] flex flex-col gap-2 relative max-w-[900px] mx-auto group"
+          className="border-t border-zinc-700 p-4 bg-[#101010] flex flex-col gap-2 relative max-w-[2500px] mx-auto group"
         >
           <textarea
             ref={promptRef}
@@ -402,7 +402,7 @@ ${inputFields.instr4}
       >
         {["1", "2", "3", "4"].map((num) => (
           <div key={num} className="flex flex-col">
-            <div className="flex justify-end">
+            <div className="flex justify-end">e
               <button
                 onClick={() => clearInputField(Number(num))}
                 className="text-red-500 hover:text-red-400 text-sm font-semibold"

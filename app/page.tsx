@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useRef } from "react"
 
-// ChatMessage interface
 interface ChatMessage {
   role: "user" | "assistant"
   content: string
@@ -14,9 +13,10 @@ export default function ChatInterface() {
 
   const [prompt, setPrompt] = useState("")
   const [chatHistory, setChatHistory] = useState<ChatMessage[]>([])
-  const [instructies, setInstructies] = useState("") // Opslag van instructies
+  const [instructies, setInstructies] = useState("")
   const [loading, setLoading] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement | null>(null)
+  const copyBtnRef = useRef<HTMLButtonElement | null>(null)
 
   // Laad instructies uit localStorage bij mount
   useEffect(() => {
@@ -32,7 +32,61 @@ export default function ChatInterface() {
   // Scroll naar beneden bij nieuwe chatberichten
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
+    // Scroll copy button mee naar beneden (als die zichtbaar is)
+    copyBtnRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" })
   }, [chatHistory])
+
+  // Functie om code te kopiëren naar clipboard
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text)
+  }
+
+  // Detecteer codeblokken in AI content (markdown ```...```)
+  const renderMessageContent = (content: string) => {
+    const codeBlockRegex = /```([\s\S]*?)```/g
+    const parts = []
+    let lastIndex = 0
+    let match: RegExpExecArray | null
+
+    while ((match = codeBlockRegex.exec(content)) !== null) {
+      // Tekst voor codeblok
+      if (match.index > lastIndex) {
+        parts.push({ type: "text", content: content.slice(lastIndex, match.index) })
+      }
+      // Codeblok
+      parts.push({ type: "code", content: match[1] })
+      lastIndex = match.index + match[0].length
+    }
+    // Tekst na laatste codeblok
+    if (lastIndex < content.length) {
+      parts.push({ type: "text", content: content.slice(lastIndex) })
+    }
+
+    return parts.map((part, i) => {
+      if (part.type === "code") {
+        return (
+          <div key={i} className="relative my-2">
+            <pre className="bg-zinc-900 p-3 rounded text-sm overflow-x-auto whitespace-pre-wrap font-mono">
+              {part.content}
+            </pre>
+            <button
+              ref={i === parts.length - 1 ? copyBtnRef : null}
+              onClick={() => copyToClipboard(part.content)}
+              className="absolute top-1 right-1 bg-green-600 text-white px-2 py-1 text-xs rounded hover:bg-green-700"
+              title="Kopieer code"
+            >
+              Kopieer
+            </button>
+          </div>
+        )
+      }
+      return (
+        <p key={i} className="whitespace-pre-wrap mb-2">
+          {part.content}
+        </p>
+      )
+    })
+  }
 
   const handleSubmit = async () => {
     if (prompt.trim() === "") return
@@ -46,7 +100,6 @@ export default function ChatInterface() {
     try {
       setLoading(true)
 
-      // Maak array met systeem-instructies, chatgeschiedenis en nieuwe user prompt
       const messagesForApi = [
         { role: "system", content: instructies || "Je bent een behulpzame assistent." },
         ...chatHistory.map((m) => ({ role: m.role, content: m.content })),
@@ -57,7 +110,7 @@ export default function ChatInterface() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          prompt: "",           // prompt leeg want alles in chat_history
+          prompt: "",
           chat_history: messagesForApi,
         }),
       })
@@ -75,11 +128,9 @@ export default function ChatInterface() {
         loading: false,
       }
 
-      // Vervang de loading message door AI antwoord
       setChatHistory((prev) => [...prev.slice(0, -1), aiMsg])
     } catch (e: any) {
       alert(e.message)
-      // Verwijder loading message als er een fout was
       setChatHistory((prev) => prev.filter((msg) => !msg.loading))
     } finally {
       setLoading(false)
@@ -88,10 +139,10 @@ export default function ChatInterface() {
 
   return (
     <div className="flex h-screen bg-zinc-900 text-white justify-center items-center p-4">
-      <div className="w-full max-w-3xl flex flex-col gap-4">
+      <div className="w-full max-w-3xl flex flex-col h-full gap-4">
         <h1 className="text-3xl font-extrabold mb-4">Chat met OpenAI</h1>
 
-        {/* Instructies invoerveld */}
+        {/* Instructies */}
         <textarea
           value={instructies}
           onChange={(e) => setInstructies(e.target.value)}
@@ -101,7 +152,7 @@ export default function ChatInterface() {
         />
 
         {/* Chatvenster */}
-        <div className="flex-1 overflow-auto mt-2 max-h-[90vh] bg-zinc-800 p-4 rounded shadow-inner">
+        <div className="flex-1 overflow-auto mt-2 bg-zinc-800 p-4 rounded shadow-inner">
           <div className="flex flex-col gap-2">
             {chatHistory.map((msg, idx) => (
               <div
@@ -112,11 +163,10 @@ export default function ChatInterface() {
                     : "self-start bg-gray-100 text-black"
                 }`}
               >
-                <div className="whitespace-pre-line">{msg.content}</div>
-                {msg.loading && (
-                  <div className="text-xs italic text-zinc-500 mt-1 animate-pulse">
-                    AI is aan het typen...
-                  </div>
+                {msg.loading ? (
+                  <div className="text-xs italic text-zinc-500 mt-1 animate-pulse">AI is aan het typen...</div>
+                ) : (
+                  renderMessageContent(msg.content)
                 )}
               </div>
             ))}

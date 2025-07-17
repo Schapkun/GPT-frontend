@@ -17,12 +17,16 @@ export default function ChatInterface() {
   const messagesEndRef = useRef<HTMLDivElement | null>(null)
   const promptRef = useRef<HTMLTextAreaElement>(null)
 
-  // Vier aparte inputvelden ter vervanging van instructies
+  // Vier aparte inputvelden + titels (allemaal editable)
   const [inputFields, setInputFields] = useState({
     title1: "",
+    instr1: "",
     title2: "",
+    instr2: "",
     title3: "",
+    instr3: "",
     title4: "",
+    instr4: "",
   })
 
   // Scroll automatisch naar onder bij nieuwe berichten
@@ -34,8 +38,8 @@ export default function ChatInterface() {
   const handlePromptChange = (e: ChangeEvent<HTMLTextAreaElement>) => {
     const textarea = e.target
     const maxRows = 10
-    textarea.rows = 1 // reset rows om scrollHeight goed te meten
-    const currentRows = Math.floor(textarea.scrollHeight / 24) // 24px is approx line height
+    textarea.rows = 1
+    const currentRows = Math.floor(textarea.scrollHeight / 24)
     if (currentRows > maxRows) {
       textarea.rows = maxRows
       textarea.style.overflowY = "auto"
@@ -46,8 +50,8 @@ export default function ChatInterface() {
     setPrompt(textarea.value)
   }
 
-  // Handle verandering in rechter inputvelden
-  const handleFieldChange = (e: ChangeEvent<HTMLInputElement>) => {
+  // Handle verandering in rechter inputvelden en titels
+  const handleFieldChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setInputFields(prev => ({ ...prev, [e.target.name]: e.target.value }))
   }
 
@@ -67,12 +71,19 @@ export default function ChatInterface() {
     try {
       setLoading(true)
 
-      // Combineer de inputvelden als system message content (JSON-string of simpel tekst)
+      // Combineer inputvelden als system message content
       const systemContent = `
-Title 1: ${inputFields.title1}
-Title 2: ${inputFields.title2}
-Title 3: ${inputFields.title3}
-Title 4: ${inputFields.title4}
+${inputFields.title1}:
+${inputFields.instr1}
+
+${inputFields.title2}:
+${inputFields.instr2}
+
+${inputFields.title3}:
+${inputFields.instr3}
+
+${inputFields.title4}:
+${inputFields.instr4}
 `
 
       const messagesForApi = [
@@ -85,7 +96,7 @@ Title 4: ${inputFields.title4}
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          prompt: "",  // leeg want alles in chat_history
+          prompt: "",
           chat_history: messagesForApi,
         }),
       })
@@ -152,32 +163,30 @@ Title 4: ${inputFields.title4}
             placeholder="Typ hier je vraag..."
             className="w-full resize-none rounded-xl bg-zinc-700 p-3 text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-green-500"
           />
-          <button
-            onClick={() => !loading && handleSubmit()}
-            disabled={loading}
-            className="mt-3 w-full rounded-xl bg-green-600 py-3 font-semibold hover:bg-green-500 disabled:opacity-50"
-          >
-            {loading ? "Even geduld..." : "Genereer antwoord"}
-          </button>
         </div>
       </section>
 
-      {/* Sidebar met 4 inputvelden */}
-      <aside className="w-80 flex flex-col gap-4 bg-zinc-800 rounded-3xl p-6 shadow-lg">
-        <h2 className="text-xl font-semibold mb-2">Extra Invoer Velden</h2>
-        {["title1", "title2", "title3", "title4"].map((field) => (
-          <div key={field} className="flex flex-col">
-            <label htmlFor={field} className="mb-1 text-zinc-300 capitalize">
-              {field.replace("title", "Titel ")}
-            </label>
+      {/* Sidebar met 4 inputvelden en titels */}
+      <aside className="w-80 flex flex-col gap-6 bg-zinc-800 rounded-3xl p-6 shadow-lg overflow-y-auto">
+        {["1", "2", "3", "4"].map((num) => (
+          <div key={num} className="flex flex-col">
             <input
-              id={field}
-              name={field}
               type="text"
-              className="rounded-md p-2 text-black"
-              value={inputFields[field as keyof typeof inputFields]}
+              name={`title${num}`}
+              placeholder={`Titel ${num}`}
+              value={inputFields[`title${num}` as keyof typeof inputFields]}
               onChange={handleFieldChange}
+              className="mb-2 rounded-md p-2 text-black h-10"
             />
+            <textarea
+              name={`instr${num}`}
+              placeholder={`Instructies ${num}`}
+              value={inputFields[`instr${num}` as keyof typeof inputFields]}
+              onChange={handleFieldChange}
+              rows={8}
+              className="rounded-md p-2 text-black resize-y"
+            />
+            <hr className="mt-4 border-zinc-600" />
           </div>
         ))}
       </aside>
